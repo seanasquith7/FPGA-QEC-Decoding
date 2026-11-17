@@ -1,4 +1,4 @@
-"""Run with: python -m unittest discover -s data_validation -v."""
+"""Run with: python -m unittest discover -s software/pynq -v."""
 
 import hashlib
 import json

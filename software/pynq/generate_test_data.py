@@ -18,7 +18,7 @@ import numpy as np
 import stim
 
 
-SOURCE = Path(__file__).resolve().parents[1] / "simulation" / "stim-circuit.py"
+SOURCE = Path(__file__).resolve().parents[2] / "simulation" / "stim-circuit.py"
 TASK = "surface_code:rotated_memory_z"
 
 

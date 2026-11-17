@@ -17,10 +17,10 @@ Stage 1 最初在仓库外开发，随后已整理到实际克隆的 Git 仓库�
 
 | 文件 | 用途 |
 | --- | --- |
-| `data_validation/generate_test_data.py` | 命令行生成器，默认载入团队现有电路 |
-| `data_validation/test_generate_test_data.py` | 使用 unittest 验证数据与标签、文件读写及命令行 |
-| `data_validation/requirements.txt` | 固定 Stim 和 NumPy 版本 |
-| `data_validation/README_Stage1.md` | 操作说明与数据格式 |
+| `software/pynq/generate_test_data.py` | 命令行生成器，默认载入团队现有电路 |
+| `software/pynq/test_generate_test_data.py` | 使用 unittest 验证数据与标签、文件读写及命令行 |
+| `software/pynq/requirements.txt` | 固定 Stim 和 NumPy 版本 |
+| `software/pynq/README_Stage1.md` | 操作说明与数据格式 |
 | `.gitignore` | 忽略虚拟环境、缓存和生成数据 |
 
 ## 数据代表什么
@@ -41,14 +41,14 @@ Stage 1 最初在仓库外开发，随后已整理到实际克隆的 Git 仓库�
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --progress-bar off -r data_validation\requirements.txt
+.\.venv\Scripts\python.exe -m pip install --progress-bar off -r software\pynq\requirements.txt
 ```
 
 仓库根目录已创建 `.venv` 时可以跳过第一行。无需激活虚拟环境。当前本机此前安装好的环境保留在仓库的上一层，因此也可以直接从仓库根目录运行以下命令：
 
 ```powershell
-..\.venv\Scripts\python.exe -m unittest discover -s data_validation -v
-..\.venv\Scripts\python.exe data_validation\generate_test_data.py --shots 1000 --seed 42 --output data_validation\output\my_test_1000
+..\.venv\Scripts\python.exe -m unittest discover -s software/pynq -v
+..\.venv\Scripts\python.exe software\pynq\generate_test_data.py --shots 1000 --seed 42 --output software\pynq\output\my_test_1000
 ```
 
 后续示例使用新安装在仓库根目录的 `.venv`；若继续使用上一层环境，把 `.\.venv` 替换为 `..\.venv`。
@@ -56,19 +56,19 @@ py -3.12 -m venv .venv
 先生成 1000 次带噪声实验：
 
 ```powershell
-.\.venv\Scripts\python.exe data_validation\generate_test_data.py --shots 1000 --seed 42 --output data_validation\output\smoke_1000
+.\.venv\Scripts\python.exe software\pynq\generate_test_data.py --shots 1000 --seed 42 --output software\pynq\output\smoke_1000
 ```
 
 生成原脚本默认的 100000 次实验：
 
 ```powershell
-.\.venv\Scripts\python.exe data_validation\generate_test_data.py --seed 42 --output data_validation\output\default_100000
+.\.venv\Scripts\python.exe software\pynq\generate_test_data.py --seed 42 --output software\pynq\output\default_100000
 ```
 
 生成无噪声对照：
 
 ```powershell
-.\.venv\Scripts\python.exe data_validation\generate_test_data.py --shots 100 --noise 0 --seed 42 --output data_validation\output\noiseless_100
+.\.venv\Scripts\python.exe software\pynq\generate_test_data.py --shots 100 --noise 0 --seed 42 --output software\pynq\output\noiseless_100
 ```
 
 输出目录必须不存在。重复运行时换一个目录名；程序会拒绝覆盖已有目录。写入失败时目录可能不完整，请选择新目录重试。`metadata.json` 最后写入，表示导出已完成；其中的哈希可用于检查文件是否被改动。
@@ -92,7 +92,7 @@ py -3.12 -m venv .venv
 ## 验证
 
 ```powershell
-.\.venv\Scripts\python.exe -m unittest discover -s data_validation -v
+.\.venv\Scripts\python.exe -m unittest discover -s software/pynq -v
 ```
 
 测试包括：
@@ -112,7 +112,7 @@ py -3.12 -m venv .venv
 
 Python 3.12、Stim 1.15.0、NumPy 2.3.5；8 个自动测试全部通过。以下数据集已在本地生成，seed 均为 42：
 
-| 输出目录（位于 data_validation/output） | shots | 每 shot detector/observable 数 | 出现 detector events 的 shots | 出现逻辑翻转的 shots |
+| 输出目录（位于 software/pynq/output） | shots | 每 shot detector/observable 数 | 出现 detector events 的 shots | 出现逻辑翻转的 shots |
 | --- | --- | --- | --- | --- |
 | `smoke_1000` | 1000 | 24 / 1 | 817 | 179 |
 | `noiseless_100` | 100 | 24 / 1 | 0 | 0 |
