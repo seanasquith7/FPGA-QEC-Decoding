@@ -1,5 +1,12 @@
 # Stage 1 — Test Data Generation
 
+## Current distance-3 export
+
+The generator saves raw_syndrome.npy with shape (shots, rounds, 8) alongside the paired detector and logical-observable files. The default three rounds yield three input bytes per shot with the local example profile. Read README_Stage2.md for the current sampling, layout and validation commands.
+
+## Historical detector-only checkpoint
+
+
 本阶段把团队的 Stim 仿真电路变成可重复使用的测试数据集。只生成数据和真实逻辑标签，不实现软件解码器、FPGA 通信或解码性能统计。
 
 ## 已检查的仓库

@@ -1,4 +1,4 @@
-"""Stage 1: export paired detector events and logical observable flips.
+"""Stage 1: export paired raw rounds, detector events and logical observable flips.
 
 The original simulation script is loaded unchanged. Optional circuit settings
 are explicit overrides of its generated rotated-memory-Z experiment.
@@ -29,6 +29,27 @@ def load_experiment():
     if not isinstance(experiment.get("circuit"), stim.Circuit):
         raise ValueError("The simulation script must define a Stim circuit.")
     return experiment
+
+
+def syndrome_mapping(circuit, rounds):
+    """Locate MR rounds in the generated distance-3 rotated-memory-Z circuit."""
+    qubits = []
+    indices = []
+    offset = 0
+    for instruction in circuit.flattened():
+        if instruction.name == "MR":
+            targets = [target.value for target in instruction.targets_copy()]
+            if len(targets) != 8 or len(set(targets)) != 8:
+                raise ValueError("Expected eight distinct stabilizer measurements per round.")
+            if qubits and targets != qubits:
+                raise ValueError("Stabilizer measurement order changed between rounds.")
+            qubits = targets
+            indices.append(list(range(offset, offset + 8)))
+        offset += instruction.num_measurements
+    if len(indices) != rounds:
+        raise ValueError("Raw measurement round count differs from the requested rounds.")
+    return {"stabilizer_qubit_ids": qubits, "measurement_indices": indices,
+            "axes": ["shot", "round", "stabilizer"], "round_order": "chronological"}
 
 
 def generate_dataset(output, *, shots=None, distance=None, rounds=None,
@@ -69,12 +90,14 @@ def generate_dataset(output, *, shots=None, distance=None, rounds=None,
     if output.exists():
         raise FileExistsError(f"Output already exists; choose a new directory: {output}")
 
-    # A single call guarantees that syndrome row i and truth row i are paired.
-    detectors, observables = circuit.compile_detector_sampler(seed=seed).sample(
-        shots=shots, separate_observables=True,
-    )
+    measurements = circuit.compile_sampler(seed=seed).sample(shots)
+    detectors, observables = circuit.compile_m2d_converter().convert(
+        measurements=measurements, separate_observables=True)
+    mapping = syndrome_mapping(circuit, rounds) if distance == 3 else None
     model = circuit.detector_error_model(decompose_errors=True)
     output.mkdir(parents=True, exist_ok=False)
+    if mapping is not None:
+        np.save(output / "raw_syndrome.npy", measurements[:, mapping["measurement_indices"]])
     for filename, data in [("detectors.01", detectors),
                            ("observables.01", observables)]:
         # Stim's 01 format: no header; one ASCII bit string per shot, LF ending.
@@ -93,6 +116,7 @@ def generate_dataset(output, *, shots=None, distance=None, rounds=None,
         },
         "parameters": {"distance": distance, "rounds": rounds,
                        "noise_per_channel": noise, "shots": shots, "seed": seed},
+        "raw_syndrome": mapping,
         "num_detectors": circuit.num_detectors,
         "num_observables": circuit.num_observables,
         "format": {

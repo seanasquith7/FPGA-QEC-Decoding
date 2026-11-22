@@ -2,6 +2,7 @@
 
 import argparse
 from dataclasses import asdict, dataclass
+import io
 import hashlib
 import json
 from pathlib import Path
@@ -55,7 +56,11 @@ def _positive_int(value, name):
 
 def load_stage1(dataset):
     """Verify Stage 1 files and return only detector inputs, never truth labels."""
-    dataset = Path(dataset)
+    bits, source, _, _ = _load_stage1(Path(dataset))
+    return bits, source
+
+
+def _load_stage1(dataset):
     metadata_bytes = (dataset / "metadata.json").read_bytes()
     metadata = json.loads(metadata_bytes)
     if metadata.get("schema_version") != 1 or metadata.get("stage") != "test_data_generation":
@@ -71,6 +76,8 @@ def load_stage1(dataset):
             raise ValueError(f"Missing or mismatched SHA-256: {name}")
         if name == "detectors.01":
             detector_bytes = data
+        elif name == "circuit.stim":
+            circuit_bytes = data
     rows = detector_bytes.split(b"\n")
     if rows[-1] != b"" or len(rows) != shots + 1:
         raise ValueError("Detector row count or LF termination does not match metadata.")
@@ -83,7 +90,7 @@ def load_stage1(dataset):
         "detectors_sha256": hashes["detectors.01"],
         "circuit_sha256": hashes["circuit.stim"],
         "shots": shots, "num_detectors": width,
-    }
+    }, metadata, circuit_bytes
 
 
 def pack_records(bits, config):
@@ -146,10 +153,26 @@ def pack_records(bits, config):
 
 
 def prepare_stage1(dataset, config):
-    if config.input_semantics != "detector_events":
-        raise ValueError("Stage 1 contains detector events, not raw syndrome rounds. "
-                         "Obtain raw rounds and mapping from the simulation lead.")
-    bits, source = load_stage1(dataset)
+    dataset = Path(dataset)
+    bits, source, metadata, circuit_bytes = _load_stage1(dataset)
+    if config.input_semantics == "raw_syndrome_rounds":
+        mapping = metadata.get("raw_syndrome")
+        if not mapping:
+            raise ValueError("Dataset has detector events, not raw syndrome rounds. Regenerate it.")
+        rounds = _positive_int(metadata["parameters"]["rounds"], "rounds")
+        from generate_test_data import syndrome_mapping
+        import stim
+        circuit = stim.Circuit(circuit_bytes.decode("utf-8"))
+        if mapping != syndrome_mapping(circuit, rounds):
+            raise ValueError("Raw syndrome mapping differs from the saved circuit.")
+        data = (dataset / "raw_syndrome.npy").read_bytes()
+        digest = hashlib.sha256(data).hexdigest()
+        if digest != metadata["files_sha256"].get("raw_syndrome.npy"):
+            raise ValueError("Missing or mismatched SHA-256: raw_syndrome.npy")
+        bits = np.load(io.BytesIO(data), allow_pickle=False)
+        if bits.shape != (source["shots"], rounds, 8):
+            raise ValueError("Raw syndrome shape must be (shots, rounds, 8).")
+        source.update(input_semantics=config.input_semantics, raw_sha256=digest, **mapping)
     payload, layout = pack_records(bits, config)
     layout["source"] = source
     return payload, layout

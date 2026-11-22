@@ -11,7 +11,7 @@ import unittest
 import numpy as np
 
 from generate_test_data import generate_dataset
-from prepare_stream_data import PackingConfig, load_stage1
+from prepare_stream_data import PackingConfig
 from run_offline_checks import run_offline_checks
 from test_prepare_stream_data import independent_unpack
 
@@ -38,10 +38,10 @@ class OfflineIntegrationTests(unittest.TestCase):
                          {"payload.bin", "layout.json", "offline_report.json"})
         data = (self.out / "payload.bin").read_bytes()
         layout = json.loads((self.out / "layout.json").read_text())
-        bits, _ = load_stage1(self.dataset)
+        bits = np.load(self.dataset / "raw_syndrome.npy").reshape(-1, 8)
         np.testing.assert_array_equal(
             independent_unpack(np.frombuffer(data, dtype=np.uint8), layout), bits)
-        self.assertEqual(len(data), 17 * 4)
+        self.assertEqual(len(data), 17 * 3)
         self.assertEqual(report["payload_sha256"], hashlib.sha256(data).hexdigest())
         for flag in ("hardware_ready", "physical_ddr_allocated", "overlay_loaded",
                      "dma_executed", "fpga_output_available"):
@@ -60,7 +60,7 @@ class OfflineIntegrationTests(unittest.TestCase):
     def test_semantics_capacity_and_selection_errors_are_not_hidden(self):
         raw_config = PackingConfig.from_dict({
             **json.loads((HERE / "packing_example.local.json").read_text()),
-            "input_semantics": "raw_syndrome_rounds"})
+            "input_semantics": "detector_events"})
         for config, kwargs in [
             (raw_config, {"output_nbytes": 16}),
             (self.config, {"output_nbytes": 0}),

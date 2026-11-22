@@ -30,8 +30,11 @@ class GenerationTests(unittest.TestCase):
         info = generate_dataset(out, shots=257, seed=7)
         circuit = load_experiment()["circuit"]
         self.assertEqual(stim.Circuit.from_file(str(out / "circuit.stim")), circuit)
-        expected_d, expected_o = circuit.compile_detector_sampler(seed=7).sample(
-            shots=257, separate_observables=True)
+        measurements = circuit.compile_sampler(seed=7).sample(257)
+        expected_d, expected_o = circuit.compile_m2d_converter().convert(
+            measurements=measurements, separate_observables=True)
+        raw = np.load(out / "raw_syndrome.npy")
+        np.testing.assert_array_equal(raw, measurements[:, :24].reshape(257, 3, 8))
         d = read_bits(out / "detectors.01", circuit.num_detectors)
         o = read_bits(out / "observables.01", circuit.num_observables)
         np.testing.assert_array_equal(d, expected_d)
@@ -60,7 +63,7 @@ class GenerationTests(unittest.TestCase):
         # An undetectable forced flip: the detector is zero, but logical truth is one.
         experiment = load_experiment()
         experiment["circuit"] = stim.Circuit(
-            "R 0 1\nX_ERROR(1) 0\nM 0 1\nDETECTOR rec[-1]\nOBSERVABLE_INCLUDE(0) rec[-2]")
+            "R 0 1\nREPEAT 3 {\nMR 2 3 4 5 6 7 8 9\nTICK\n}\nX_ERROR(1) 0\nM 0 1\nDETECTOR rec[-1]\nOBSERVABLE_INCLUDE(0) rec[-2]")
         with patch("generate_test_data.load_experiment", return_value=experiment):
             out = self.root / "known"
             generate_dataset(out, shots=8)

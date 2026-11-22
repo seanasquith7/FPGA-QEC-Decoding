@@ -21,13 +21,13 @@ If the source dataset is missing, generate it with the existing Stage 1 command.
 
 | File | Content |
 | --- | --- |
-| payload.bin | Packed detector input bytes only |
+| payload.bin | Packed round-by-round raw syndrome bytes with the example profile |
 | layout.json | Source hashes, exact packing configuration, sizes and index formulas |
 | offline_report.json | Input integrity, local buffer copy/initialization/release and exported payload hash checks; optional HWH inventory; outstanding hardware requirements |
 
 The report is written last. A failed write may leave an incomplete directory; choose a new directory to rerun. Existing output directories are not overwritten.
 
-For the existing 1,000-shot dataset and local 32-bit profile, expect 4,000 input bytes. The raw-syndrome configuration is rejected for this dataset. Output labels, corrections, accuracy, FPGA timing, and fabricated receive results are never exported.
+For a newly generated distance-3, three-round, 1,000-shot dataset, expect 3,000 input bytes. Regenerate legacy detector-only datasets before using the raw profile. See README_Stage2.md for prediction validation.
 
 HWH metadata issues remain visible in the nested report. A successful runner exit means that offline software checks completed; it does not mean that a supplied HWH is complete or approved. Hardware readiness flags remain false.
 

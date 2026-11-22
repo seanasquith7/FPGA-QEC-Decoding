@@ -57,7 +57,7 @@ def run_offline_checks(dataset, config, output, *, output_nbytes, hwh=None, dma_
         "hwh_inspection": inspection,
         "pending": [
             "Real matching bit/hwh, available board and confirmed PYNQ/DMA configuration",
-            "Confirmed input semantics, mapping, framing and TLAST/TKEEP rules",
+            "Confirmed stabilizer mapping, framing and TLAST/TKEEP rules",
             "Correction encoding, output length and result-to-shot pairing",
             "Board DDR allocation, DMA completion and recovery acceptance",
         ],

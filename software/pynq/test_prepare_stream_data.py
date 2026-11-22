@@ -97,8 +97,14 @@ class PreparationTests(unittest.TestCase):
             np.testing.assert_array_equal(independent_unpack(payload, layout), arranged.reshape(4, 2))
 
     def test_semantics_cannot_be_silently_changed(self):
+        dataset = self.root / "legacy"
+        generate_dataset(dataset, shots=2)
+        path = dataset / "metadata.json"
+        metadata = json.loads(path.read_text())
+        del metadata["raw_syndrome"]
+        path.write_text(json.dumps(metadata))
         with self.assertRaisesRegex(ValueError, "not raw syndrome"):
-            prepare_stage1(self.root / "unused", profile(24, input_semantics="raw_syndrome_rounds"))
+            prepare_stage1(dataset, profile(24, input_semantics="raw_syndrome_rounds"))
         with self.assertRaises(ValueError):
             pack_records(np.zeros((2, 24), dtype=np.uint8), profile(24, record_order="round-major"))
         with self.assertRaises(ValueError):
@@ -163,7 +169,7 @@ class PreparationTests(unittest.TestCase):
         layout = json.loads((out / "layout.json").read_text())
         original = (out / "payload.bin").read_bytes()
         self.assertEqual(hashlib.sha256(original).hexdigest(), layout["payload_sha256"])
-        self.assertEqual(layout["payload_nbytes"], 40)
+        self.assertEqual(layout["payload_nbytes"], 30)
         result = subprocess.run(command, capture_output=True, text=True)
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual((out / "payload.bin").read_bytes(), original)
